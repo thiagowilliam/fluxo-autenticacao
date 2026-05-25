@@ -97,13 +97,22 @@ export default class Auth {
    * decode do JWT, setUserProperties no GTM e persistência no AuthDataStore.
    */
   public setExternalToken(token: string): void {
-    const user = decodeUser(token);
-    const { customer_id, email } = user;
-    GoogleTagManager.setUserProperties(customer_id, email);
+  const decoded = jwtDecode(token) as Record<string, any>;
 
-    Auth.lastProcessedToken = token;
-    AuthDataStore.setUserData(user, token);
-  }
+  // Mapeia os campos do JWT do PreAuth para a interface User
+  const user: User = {
+    customer_id: decoded.customer_id || decoded.sub || '',
+    email: decoded.email || decoded.preferred_username || '',
+    name: decoded.name || '',
+    customers_group_id: decoded.customers_group_id || '',
+  };
+
+  const { customer_id, email } = user;
+  GoogleTagManager.setUserProperties(customer_id, email);
+
+  Auth.lastProcessedToken = token;
+  AuthDataStore.setUserData(user, token);
+}
 
   public logout(): void {
     Auth.lastProcessedToken = null;
