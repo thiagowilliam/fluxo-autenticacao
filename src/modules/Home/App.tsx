@@ -60,9 +60,9 @@ const AppContent: React.FC<{ passedTimeThreshold: boolean }> = ({
 
 const App: React.FC = () => {
   const [passedTimeThreshold, setPassedTimeThreshold] = useState(false);
-  const { user, company } = useUserData();
-  const currentUser = user;
-  const currentCompany = company;
+  const [isPreAuthed, setIsPreAuthed] = useState(
+    () => !!PreAuthStore.get()?.access_token,
+  );
 
   useEffect(() => {
     const timeout = 5000;
@@ -73,9 +73,21 @@ const App: React.FC = () => {
     return () => clearTimeout(timeoutId);
   }, []);
 
-  const isPreAuthed = !!PreAuthStore.get()?.token;
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const hasToken = !!PreAuthStore.get()?.access_token;
+      if (hasToken && !isPreAuthed) {
+        setIsPreAuthed(true);
+      }
+      if (hasToken) {
+        clearInterval(interval);
+      }
+    }, 100);
 
-  // Se já autenticado via PreAuth, pula o ReactKeycloakProvider
+    return () => clearInterval(interval);
+  }, [isPreAuthed]);
+
+  // PreAuth ativo → renderiza SEM ReactKeycloakProvider
   if (isPreAuthed) {
     return (
       <ThemeProvider theme={theme}>
@@ -88,8 +100,7 @@ const App: React.FC = () => {
     );
   }
 
-  // Fluxo normal: PreAuthGate verifica params na URL,
-  // se não tiver, segue pro Keycloak
+  // Fluxo normal → PreAuthGate decide se bloqueia ou deixa passar pro Keycloak
   return (
     <ThemeProvider theme={theme}>
       <QueryClientProvider client={homeQueryClient}>
