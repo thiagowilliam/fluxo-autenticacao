@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 
 import { ReactKeycloakProvider } from '@react-keycloak/web';
@@ -84,9 +84,26 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => {
-  const isPreAuthed = !!PreAuthStore.get()?.token;
+  const [isPreAuthed, setIsPreAuthed] = useState(
+    () => !!PreAuthStore.get()?.access_token,
+  );
 
-  // Se já autenticado via PreAuth, pula o ReactKeycloakProvider
+  // Reavalia após o PreAuthGate salvar o token no store
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const hasToken = !!PreAuthStore.get()?.access_token;
+      if (hasToken && !isPreAuthed) {
+        setIsPreAuthed(true);
+      }
+      if (hasToken) {
+        clearInterval(interval);
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [isPreAuthed]);
+
+  // PreAuth ativo → renderiza SEM ReactKeycloakProvider
   if (isPreAuthed) {
     return (
       <QueryClientProvider client={contextualQueryClient}>
@@ -97,8 +114,7 @@ const App: React.FC = () => {
     );
   }
 
-  // Fluxo normal: PreAuthGate verifica se tem params na URL,
-  // se não tiver, segue pro Keycloak normalmente
+  // Fluxo normal → PreAuthGate decide se bloqueia ou deixa passar pro Keycloak
   return (
     <QueryClientProvider client={contextualQueryClient}>
       <PreAuthGate>
