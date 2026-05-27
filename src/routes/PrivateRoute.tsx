@@ -28,7 +28,7 @@ const PrivateRoute: React.FC<PrivateRoutesProps> = ({
     // Se autenticado via PreAuth, permite acesso
     // (o controle de acesso é feito pelo backend no /authme/session)
     const preAuthData = PreAuthStore.get();
-    if (preAuthData?.token) {
+    if (preAuthData?.accessToken) {
       return true;
     }
 
